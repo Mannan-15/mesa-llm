@@ -101,7 +101,7 @@ class Impostor(LLMAgent, mesa.discrete_space.CellAgent):
             # Here we include the internal state (Role) as requested for now
             info = (
                 f"- Agent {agent.unique_id} located at {agent.pos}. "
-                f"State: {agent.internal_state} (Role: {agent.role})" 
+                f"State: {agent.state}" 
             )
             surroundings_list.append(info)
 
@@ -234,18 +234,17 @@ class Crewmate(LLMAgent, mesa.discrete_space.CellAgent):
         for agent in self.neighbours:
             if agent.unique_id == self.unique_id:
                 continue
-            # Note: Crewmates technically shouldn't see roles, but for this
-            # simplified version, you said we are ignoring the info leak.
+            
             info = (
                 f"- Agent {agent.unique_id} at {agent.pos}. "
-                f"State: {agent.internal_state} (Role: {agent.role})" 
+                f"(State: {agent.state})" 
             )
             surroundings_list.append(info)
 
         return "You see the following agents nearby:\n" + "\n".join(surroundings_list)
 
     def step(self):
-        obs_str = self.get_surroundings_info() # Fixed the 'self' bug here
+        obs_str = self.get_surroundings_info()
         
         formatted_prompt = CREWMATE_STEP_PROMPT_TEMPLATE.format(
             step=self.model.schedule.steps,
@@ -257,6 +256,7 @@ class Crewmate(LLMAgent, mesa.discrete_space.CellAgent):
             obs=formatted_prompt,
             selected_tools=["move_randomly", "do_task", "stay"]
         )
+        
         self.apply_plan(plan)
 
     async def astep(self):
@@ -272,5 +272,6 @@ class Crewmate(LLMAgent, mesa.discrete_space.CellAgent):
             obs=formatted_prompt,
             selected_tools=["move_randomly", "do_task", "stay"]
         )
+        
         self.apply_plan(plan)
         
