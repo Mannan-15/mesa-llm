@@ -115,3 +115,19 @@ class GameModel(Model):
             self.running = False
             print(f"\n[bold green]GAME OVER: CREWMATES WIN! (Survived {self.max_steps} steps)[/bold green]")
             
+            
+# ===============================================================
+#                     RUN WITHOUT GRAPHICS
+# ===============================================================
+
+if __name__ == "__main__":
+    """
+    run the model without the solara integration with:
+    conda activate mesa-llm && python -m examples.negotiation.model
+    """
+
+    from examples.saboteur.app import model
+
+    # Run the model for 10 steps
+    for _ in range(10):
+        model.step()
