@@ -224,6 +224,7 @@ class Crewmate(LLMAgent, mesa.discrete_space.CellAgent):
         #  we have to see other agents status whether doing task or just walking or going to do task
         self.vision = vision
         self.state = "moving"
+        self.busy_duration = 0
         
         self.memory = STLTMemory(
             agent = self,
@@ -261,6 +262,19 @@ class Crewmate(LLMAgent, mesa.discrete_space.CellAgent):
         return f"You see the following agents nearby:\n" + "\n".join(surroundings_list) + task_info
 
     def step(self):
+        if self.busy_duration > 0:
+            self.busy_duration -= 1
+            # Optional: Visual log
+            print(f"Agent {self.unique_id} is working... ({self.busy_duration} steps left)")
+            
+            if self.busy_duration == 0:
+                # Task Completed Logic
+                # You might want to add a memory entry so the LLM knows it finished
+                print(f"[SUCCESS] Agent {self.unique_id} finished the task!")
+                self.memory.add_observation("System: You have finished your task at {self.pos}.")
+            
+            return
+        
         obs_str = self.get_surroundings_info()
         
         formatted_prompt = CREWMATE_STEP_PROMPT_TEMPLATE.format(
