@@ -102,10 +102,19 @@ class Impostor(LLMAgent, mesa.discrete_space.CellAgent):
             info = (
                 f"- Agent {agent.unique_id} located at {agent.pos}. "
                 f"State: {agent.state}" 
+                f"Is Task Location: {self.model.task_layer.data[agent.pos] == 1}"
             )
             surroundings_list.append(info)
+        
+        is_task_here = self.model.task_layer.data[self.pos] == 1
+        
+        task_info = ""
+        if is_task_here:
+            task_info = "\n[IMPORTANT] You are currently standing on a TASK location. You can wait here for a crewmate to arrive or stand still to fake a task here or just move."
+        else:
+            task_info = "\nThis is not a task location."
 
-        return "You see the following agents nearby:\n" + "\n".join(surroundings_list) 
+        return f"You see the following agents nearby:\n" + "\n".join(surroundings_list) + task_info
      
     def step(self):
         
@@ -240,8 +249,16 @@ class Crewmate(LLMAgent, mesa.discrete_space.CellAgent):
                 f"(State: {agent.state})" 
             )
             surroundings_list.append(info)
+        
+        is_task_here = self.model.task_layer.data[self.pos] == 1
+        
+        task_info = ""
+        if is_task_here:
+            task_info = "\n[IMPORTANT] You are currently standing on a TASK location. You can perform a task here."
+        else:
+            task_info = "\nThere is no task at your current location."
 
-        return "You see the following agents nearby:\n" + "\n".join(surroundings_list)
+        return f"You see the following agents nearby:\n" + "\n".join(surroundings_list) + task_info
 
     def step(self):
         obs_str = self.get_surroundings_info()

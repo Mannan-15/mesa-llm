@@ -1,6 +1,6 @@
 from mesa.datacollection import DataCollector
 from mesa.model import Model
-from mesa.space import MultiGrid
+from mesa.space import MultiGrid, PropertyLayer
 from rich import print
 
 from examples.saboteur.agents import (
@@ -21,6 +21,7 @@ class GameModel(Model):
         llm_model: str = "",
         vision: int = 8,
         max_steps: int = 30,
+        n_tasks: int = 10,
         seed=None
     ):
         
@@ -32,6 +33,19 @@ class GameModel(Model):
         self.running = True
         
         self.grid = MultiGrid(self.width, self.height, torus=False)
+        self.task_layer = PropertyLayer(
+            name="task_locations", 
+            width=self.width, 
+            height=self.height, 
+            default_value=0, 
+            dtype=int
+        )
+        
+        task_x = self.rng.integers(0, self.grid.width, size=n_tasks)
+        task_y = self.rng.integers(0, self.grid.height, size=n_tasks)
+        
+        for x, y in zip(task_x, task_y):
+            self.task_layer.set_cell((x, y), 1)
 
         model_reporters = {
             "Crewmates": lambda m: len([a for a in m.agents if isinstance(a, Crewmate)]),
