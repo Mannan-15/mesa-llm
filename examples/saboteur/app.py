@@ -1,4 +1,19 @@
 # app.py
+import sys
+import os
+
+# --- OLLAMA CONFIGURATION (Must run before model init) ---
+# This redirects the OpenAI client to your local Ollama server
+os.environ["OPENAI_API_KEY"] = "ollama"
+os.environ["OPENAI_BASE_URL"] = "http://localhost:11434/v1"
+os.environ["OLLAMA_API_KEY"] = "ollama"       # <--- Add this
+os.environ["OLLAMA/LLAMA3.1_API_KEY"] = "ollama"
+# Add this line to satisfy the library's check for "llama3.1":
+os.environ["LLAMA3.1_API_KEY"] = "ollama"
+
+# Add the project root to system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
 import logging
 import warnings
 import os  # Added os import
@@ -16,12 +31,7 @@ from mesa.visualization import (
 from examples.saboteur.agents import Impostor, Crewmate
 from examples.saboteur.model import GameModel
 from mesa_llm.parallel_stepping import enable_automatic_parallel_stepping
-from mesa_llm.reasoning.react import ReactReasoning
-
-# --- OLLAMA CONFIGURATION (Must run before model init) ---
-# This redirects the OpenAI client to your local Ollama server
-os.environ["OPENAI_API_KEY"] = "ollama"
-os.environ["OPENAI_BASE_URL"] = "http://localhost:11434/v1"
+from mesa_llm.reasoning.react import ReActReasoning
 
 # --- Setup & Configuration ---
 # Suppress Pydantic and other warnings for cleaner logs
@@ -62,8 +72,8 @@ model_params = {
     "height": 10,
     "vision": 6, # Reduced vision slightly to reduce prompt token count (speed up Llama 3)
     "max_steps": 30,
-    "reasoning": ReactReasoning,
-    "llm_model": "llama3.1",  # CHANGED: Default to local Llama 3.1
+    "reasoning": ReActReasoning,
+    "llm_model": "ollama/llama3.1",  # CHANGED: Default to local Llama 3.1
 }
 
 # --- Initial Model Instance ---
