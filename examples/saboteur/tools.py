@@ -5,20 +5,23 @@ from examples.saboteur.agents import impostor_tool_manager, crewmate_tool_manage
 #                               SHARED TOOLS
 # ==============================================================================
 
-# FIX: Stack the decorators to register with BOTH managers
 @tool(tool_manager=impostor_tool_manager)
 @tool(tool_manager=crewmate_tool_manager)
-def move_randomly(agent: "LLMAgent") -> str:
+def move_randomly(agent: "LLMAgent", **kwargs) -> str:
     """
     Move to an adjacent cell (up, down, left, right, or diagonals).
     
     Args:
         agent: Provided automatically.
+        kwargs: (Optional) Ignores extra arguments like 'direction'.
         
     Returns:
         Result of the movement.
     """
-    # 1. Get possible moves
+    # 1. Capture old position for the log
+    old_pos = agent.pos
+
+    # 2. Get possible moves (Force include_center=False)
     possible_steps = agent.model.grid.get_neighborhood(
         agent.pos,
         moore=True,
@@ -28,21 +31,22 @@ def move_randomly(agent: "LLMAgent") -> str:
     if not possible_steps:
         return "You are stuck and cannot move."
 
-    # 2. Pick one and move
+    # 3. Pick one and move
     new_position = agent.random.choice(possible_steps)
     agent.model.grid.move_agent(agent, new_position)
     
-    return f"Moved from {agent.pos} to {new_position}."
+    return f"Moved from {old_pos} to {new_position}."
 
 
 @tool(tool_manager=impostor_tool_manager)
 @tool(tool_manager=crewmate_tool_manager)
-def stay(agent: "LLMAgent") -> str:
+def stay(agent: "LLMAgent", **kwargs) -> str:
     """
     Stay in the current position for one turn.
     
     Args:
         agent: Provided automatically.
+        kwargs: (Optional) Ignores extra arguments.
         
     Returns:
         Confirmation message.
@@ -55,7 +59,7 @@ def stay(agent: "LLMAgent") -> str:
 # ==============================================================================
 
 @tool(tool_manager=impostor_tool_manager)
-def kill_agent(agent: "LLMAgent", target_id: int) -> str:
+def kill_agent(agent: "LLMAgent", target_id: int, **kwargs) -> str:
     """
     Kill a specific Crewmate in the same cell. 
     REQUIRES: Kill Cooldown must be 0.
@@ -63,6 +67,7 @@ def kill_agent(agent: "LLMAgent", target_id: int) -> str:
     Args:
         agent: Provided automatically.
         target_id: The integer ID of the agent to kill.
+        kwargs: (Optional) Ignores extra arguments.
         
     Returns:
         Success or Failure message.
@@ -71,11 +76,17 @@ def kill_agent(agent: "LLMAgent", target_id: int) -> str:
     if agent.kill_cooldown > 0:
         return f"FAILURE: Kill Cooldown is not 0. You must wait {agent.kill_cooldown} turns."
 
+    if target_id is None:
+        return "FAILURE: You called kill_agent but did not provide a 'target_id'. You must specify WHO to kill (e.g., target_id=5)."
+    
     # 2. Check location (Must be in same cell)
-    # Using new Mesa 3.0 grid access
-    cell_mates = agent.model.grid.get_cell_list_contents([agent.pos])
+    nearby_cells = agent.model.grid.get_neighborhood(
+        agent.pos, moore=True, include_center=True, radius=1
+    )
+    nearby_agents = agent.model.grid.get_cell_list_contents(nearby_cells)
+    
     target = None
-    for a in cell_mates:
+    for a in nearby_agents:
         if a.unique_id == target_id:
             target = a
             break
@@ -88,23 +99,21 @@ def kill_agent(agent: "LLMAgent", target_id: int) -> str:
 
     # 3. EXECUTE KILL
     target.state = "dead"
+    target.remove() # Remove from simulation loop
     
-    # In Mesa 3.0, .remove() deletes the agent from the simulation entirely.
-    # This prevents them from moving or thinking again.
-    target.remove()
-    
-    agent.kill_cooldown = 20 # Reset cooldown
+    agent.kill_cooldown = 3 # Reset cooldown
     
     return f"SUCCESS: You killed Agent {target_id}. Their body is now on the floor. MOVE AWAY immediately!"
 
 
 @tool(tool_manager=impostor_tool_manager)
-def fake_task(agent: "LLMAgent") -> str:
+def fake_task(agent: "LLMAgent", **kwargs) -> str:
     """
     Pretend to do a task to blend in.
     
     Args:
         agent: Provided automatically.
+        kwargs: (Optional) Ignores extra arguments.
         
     Returns:
         Status message.
@@ -118,12 +127,13 @@ def fake_task(agent: "LLMAgent") -> str:
 # ==============================================================================
 
 @tool(tool_manager=crewmate_tool_manager)
-def do_task(agent: "LLMAgent") -> str:
+def do_task(agent: "LLMAgent", **kwargs) -> str:
     """
     Perform a task at the current location.
     
     Args:
         agent: Provided automatically.
+        kwargs: (Optional) Ignores extra arguments.
         
     Returns:
         Success or Failure message.

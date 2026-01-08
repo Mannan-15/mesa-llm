@@ -6,10 +6,11 @@ import os
 # This redirects the OpenAI client to your local Ollama server
 os.environ["OPENAI_API_KEY"] = "ollama"
 os.environ["OPENAI_BASE_URL"] = "http://localhost:11434/v1"
-os.environ["OLLAMA_API_KEY"] = "ollama"       # <--- Add this
+os.environ["OLLAMA_API_KEY"] = "ollama"
 os.environ["OLLAMA/LLAMA3.1_API_KEY"] = "ollama"
-# Add this line to satisfy the library's check for "llama3.1":
 os.environ["LLAMA3.1_API_KEY"] = "ollama"
+os.environ["OLLAMA/QWEN2.5:0.5B_API_KEY"] = "ollama"
+os.environ["QWEN2.5:0.5B_API_KEY"] = "ollama"
 
 # Add the project root to system path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
@@ -68,12 +69,12 @@ model_params = {
         "max": 10,
     },
     # Reduced grid size slightly for faster pathfinding/rendering with local LLM lag
-    "width": 10, 
-    "height": 10,
+    "width": 8, 
+    "height": 8,
     "vision": 6, # Reduced vision slightly to reduce prompt token count (speed up Llama 3)
     "max_steps": 30,
     "reasoning": ReActReasoning,
-    "llm_model": "ollama/llama3.1",  # CHANGED: Default to local Llama 3.1
+    "llm_model":"ollama/qwen2.5:0.5b",  # CHANGED: Default to local Llama 3.1
 }
 
 # --- Initial Model Instance ---
@@ -98,18 +99,21 @@ def agent_portrayal(agent):
 
     portrayal = {
         "size": 50,  # Size of the dot
+        "color": "black"
     }
-
-    if isinstance(agent, Impostor):
+    
+    if hasattr(agent, "state") and agent.state == "dead":
+        portrayal["color"] = "#555555"  # Dark Gray for dead bodies
+        portrayal["size"] = 30          # Smaller size (like a body on floor)
+        return portrayal                # Return early so we don't overwrite this
+    
+    elif isinstance(agent, Impostor):
         portrayal["color"] = IMPOSTOR_COLOR
         # Optional: Make Impostor slightly larger or distinct shape if supported
         # portrayal["marker"] = "v" 
 
     elif isinstance(agent, Crewmate):
         portrayal["color"] = CREWMATE_COLOR
-        # If the crewmate is dead (if you track that state), turn them gray
-        if hasattr(agent, "state") and agent.state == "dead":
-            portrayal["color"] = "#808080"
 
     return portrayal
 

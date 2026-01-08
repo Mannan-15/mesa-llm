@@ -18,19 +18,34 @@ CORE RULES:
 """
 
 IMPOSTOR_STEP_PROMPT_TEMPLATE = """
-[CURRENT SITUATION]
-Time Step: {step}
-My Location: {pos}
-[INTERNAL STATE]
-- Kill Cooldown: {cooldown} (0 means READY TO KILL)
-[RADAR / VISION]
-The following agents are visible:
+[Role]
+You are the IMPOSTOR. Your ONLY goal is to kill Crewmates.
+
+[Status]
+Step: {step}
+My Pos: {pos}
+Cooldown: {cooldown} (0 = KILL NOW)
+
+[Radar]
 {observation}
-[TASK]
-Analyze the radar. 
-- If a Crewmate is in my cell (distance 0) AND Cooldown is 0 AND no witnesses -> KILL.
-- If Cooldown > 0 -> MOVE or FAKE_TASK.
-Select the best tool to use now.
+
+[Mission]
+1. CHECK COOLDOWN:
+   - If Cooldown > 0: You MUST wait. Use 'move_randomly' to find targets.
+   - If Cooldown == 0: You are LETHAL.
+
+2. FIND TARGET:
+   - Look at [Radar] above.
+   - Is there a Crewmate within distance 1? (Same cell or adjacent)
+   
+3. EXECUTE:
+   - If Cooldown is 0 AND Target is near -> USE tool 'kill_agent(target_id=...)'.
+   - Do NOT hesitate. Do NOT use move randomly or fake task if you can kill.
+   - Only use 'fake_task' or 'move_randomly' if you are alone and waiting for cooldown.
+
+[Critical]
+- You MUST input the specific 'target_id' from the Radar.
+- Example: If Radar says "Agent 5 at (2,3)", use kill_agent(target_id=5).
 """
 
 CREWMATE_SYSTEM_PROMPT = """
@@ -116,7 +131,7 @@ class Impostor(LLMAgent, mesa.Agent):
         obs_str = self.get_surroundings_info() 
 
         formatted_prompt = IMPOSTOR_STEP_PROMPT_TEMPLATE.format(
-            step=self.model.steps,     # <--- FIX: Changed from schedule.steps to self.model.steps
+            step=self.model.steps,
             pos=self.pos,
             cooldown=self.kill_cooldown,
             observation=obs_str
@@ -175,10 +190,16 @@ class Crewmate(LLMAgent, mesa.Agent):
         return f"Agents nearby:\n" + "\n".join(surroundings_list) + ("\nTask available." if is_task_here else "")
 
     def step(self):
+        if hasattr(self, "state") and self.state == "dead":
+            return
+        
         if self.busy_duration > 0:
             self.busy_duration -= 1
             if self.busy_duration == 0:
-                self.memory.add_observation(f"System: Task finished at {self.pos}.")
+                self.memory.add_to_memory(
+                    type="system", 
+                    content={"alert": f"Task finished at {self.pos}. You are free to move."}
+                )
             return
         
         obs_str = self.get_surroundings_info()
