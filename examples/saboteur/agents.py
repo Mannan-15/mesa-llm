@@ -151,7 +151,7 @@ class Impostor(LLMAgent, mesa.Agent):
         if self.ttl > 0:
             self.ttl -= 1
             if self.current_action:
-                self.tool_manager.execute(self.current_action, self)
+                self.tool_manager.call_tools(self, self.current_action)
                 return
         
         if not self.current_action or self.ttl == 0:
@@ -249,7 +249,7 @@ class Crewmate(LLMAgent, mesa.Agent):
         if self.ttl > 0:
             self.ttl -= 1
             if self.current_action:
-                self.tool_manager.execute(self.current_action)
+                self.tool_manager.call_tools(self, self.current_action)
                 return
         
         if not self.current_action or self.ttl == 0:
