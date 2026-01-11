@@ -18,7 +18,7 @@ RULES:
 2. CHECK TARGETS: You can ONLY kill agents listed in 'KILLABLE TARGETS'.
 3. NO HALLUCINATION: Do NOT invent Agent IDs. Only use IDs you see in the Radar.
 4. IF COOLDOWN > 0: You MUST use 'move_randomly' or 'fake_task'.
-5. PERSISTENCE (TTL): Your chosen action will automatically repeat for 3 steps. Do not expect to change it immediately.
+5. PERSISTENCE (TTL): Your chosen action will automatically repeat for 1 steps. Do not expect to change it immediately.
 """
 
 IMPOSTOR_STEP_PROMPT_TEMPLATE = """
@@ -151,7 +151,7 @@ class Impostor(LLMAgent, mesa.Agent):
         if self.ttl > 0:
             self.ttl -= 1
             if self.current_action:
-                self.tool_manager.call_tools(self, self.current_action)
+                self.apply_plan(self.current_action)
                 return
         
         if not self.current_action or self.ttl == 0:
@@ -249,7 +249,7 @@ class Crewmate(LLMAgent, mesa.Agent):
         if self.ttl > 0:
             self.ttl -= 1
             if self.current_action:
-                self.tool_manager.call_tools(self, self.current_action)
+                self.apply_plan(self.current_action)
                 return
         
         if not self.current_action or self.ttl == 0:
