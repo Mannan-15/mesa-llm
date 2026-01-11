@@ -61,7 +61,7 @@ def kill_agent(agent: "LLMAgent", target_id: int = None, **kwargs) -> str:
         kwargs: Extra arguments ignored.
     """
     # Import Task to check against it
-    from examples.saboteur.agents import Task
+    from examples.saboteur.agents import Task, Impostor
 
     # 1. Check Cooldown
     if agent.kill_cooldown > 0:
@@ -91,7 +91,10 @@ def kill_agent(agent: "LLMAgent", target_id: int = None, **kwargs) -> str:
     # --- NEW CHECK: PREVENT KILLING TASKS ---
     if isinstance(target, Task):
         return f"FAILURE: Agent {target_id} is a Task (inanimate object). You can only kill Crewmates!"
-
+    
+    if isinstance(target, Impostor):
+        return f"Failure: Agent {target_id} is other Impostor (your ally). You can only kill Crewmates!"
+    
     if target.unique_id == agent.unique_id:
         return "FAILURE: You cannot kill yourself."
 

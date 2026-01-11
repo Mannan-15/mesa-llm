@@ -18,7 +18,11 @@ RULES:
 2. CHECK TARGETS: You can ONLY kill agents listed in 'KILLABLE TARGETS'.
 3. NO HALLUCINATION: Do NOT invent Agent IDs. Only use IDs you see in the Radar.
 4. IF COOLDOWN > 0: You MUST use 'move_randomly' or 'fake_task'.
-5. PERSISTENCE (TTL): Your chosen action will automatically repeat for 1 steps. Do not expect to change it immediately.
+
+TTL (PERSISTENCE) RULE:
+- The action you choose below will automatically REPEAT for 1 step.
+- You will not get to choose again until those 3 steps are over.
+- REASONING: Explain why your action is good for the next 1 step (e.g., "I will hunt for 1 step").
 """
 
 IMPOSTOR_STEP_PROMPT_TEMPLATE = """
@@ -32,11 +36,10 @@ Kill Cooldown: {cooldown} (0 = READY TO KILL, >0 = WAIT)
 
 [DECISION LOGIC]
 1. Is Cooldown 0? 
-   - YES: Check [KILLABLE TARGETS]. If list is not empty, use kill_agent(target_id=X).
+   - YES: Check [KILLABLE TARGETS]. If list is not empty, use kill_agent(target_id), where target_id should be provided.
    - NO: You must wait. Use 'move_randomly' to hunt or 'fake_task' to blend in.
-2. Remember: This action will repeat for a few turns (TTL).
 
-3. Select Action:
+2. Select Action (Remember: It repeats for 1 turn):
 """
 
 CREWMATE_SYSTEM_PROMPT = """
@@ -47,7 +50,11 @@ RULES:
 1. CHECK TASK: You can ONLY use 'do_task' if 'Task Available' is YES.
 2. IF NO TASK: You must 'move_randomly' to find one.
 3. SURVIVAL: If you see an Impostor behaving strangely, move away.
-4. PERSISTENCE (TTL): Your chosen action will automatically repeat for 3 steps.
+
+TTL (PERSISTENCE) RULE:
+- The action you choose below will automatically REPEAT for 3 steps.
+- You will not get to choose again until those 3 steps are over.
+- REASONING: Explain why your action is safe for the next 3 steps (e.g., "I will search for tasks for 3 steps").
 """
 
 CREWMATE_STEP_PROMPT_TEMPLATE = """
@@ -62,9 +69,8 @@ My Location: {pos}
 1. Is 'Task Available' YES?
    - YES: Use tool 'do_task'.
    - NO: Use tool 'move_randomly' to search for tasks.
-2. Remember: This action will repeat for a few turns (TTL).
    
-3. Select Action:
+2. Select Action (Remember: It repeats for 3 turns):
 """
 
 # --- AGENT CLASSES ---
@@ -118,7 +124,7 @@ class Impostor(LLMAgent, mesa.Agent):
 
         for agent in nearby_agents:
             if agent.unique_id == self.unique_id: continue # Skip self
-            if isinstance(agent, Task): continue           # <--- FIX: Skip Task agents!
+            if isinstance(agent, Task): continue           # Skip Task agents!
             
             # Calculate distance
             dist = max(abs(agent.pos[0] - self.pos[0]), abs(agent.pos[1] - self.pos[1]))
@@ -126,7 +132,6 @@ class Impostor(LLMAgent, mesa.Agent):
             info = f"Agent {agent.unique_id} at {agent.pos} (Dist: {dist})"
             
             # Identify killable targets (Distance <= 1)
-            # Note: We assume anyone who isn't me and isn't a Task is a Crewmate (or another Impostor)
             if dist <= 1: 
                 killable_targets.append(str(agent.unique_id))
             
@@ -148,12 +153,15 @@ class Impostor(LLMAgent, mesa.Agent):
         if self.kill_cooldown > 0:
             self.kill_cooldown -= 1
         
+        # --- TTL EXECUTION ---
         if self.ttl > 0:
             self.ttl -= 1
             if self.current_action:
+                # Use apply_plan to automatically unwrap and execute
                 self.apply_plan(self.current_action)
                 return
         
+        # --- NEW PLAN GENERATION ---
         if not self.current_action or self.ttl == 0:
             obs_str = self.get_surroundings_info() 
 
@@ -164,12 +172,15 @@ class Impostor(LLMAgent, mesa.Agent):
                 observation=obs_str
             )
 
+            # NOTE: passing ttl=3 here is just for metadata/logging
+            # The actual loop control is handled by self.ttl = 3 below
             plan = self.reasoning.plan(
                 obs=formatted_prompt,
                 selected_tools=["kill_agent", "move_randomly", "fake_task"],
                 ttl=3
             )
-            self.ttl = 1
+            
+            self.ttl = 3  # Set the loop counter
             self.current_action = plan
             self.apply_plan(plan)
 
@@ -201,7 +212,7 @@ class Crewmate(LLMAgent, mesa.Agent):
         self.memory = STLTMemory(agent=self, display=True, llm_model=llm_model)
         self.tool_manager = crewmate_tool_manager
         self.ttl = ttl
-        self.current_action = None
+        self.current_action = None # Initialize properly
 
     def get_surroundings_info(self):
         from examples.saboteur.agents import Task
@@ -221,7 +232,7 @@ class Crewmate(LLMAgent, mesa.Agent):
         agent_list = []
         for agent in nearby_agents:
             if agent.unique_id == self.unique_id: continue
-            if isinstance(agent, Task): continue    # <--- FIX: Ignore Task agents in vision list
+            if isinstance(agent, Task): continue    # Ignore Task agents in vision list
             
             agent_list.append(f"- Agent {agent.unique_id} at {agent.pos}")
 
@@ -246,12 +257,14 @@ class Crewmate(LLMAgent, mesa.Agent):
                 )
             return
 
+        # --- TTL EXECUTION ---
         if self.ttl > 0:
             self.ttl -= 1
             if self.current_action:
                 self.apply_plan(self.current_action)
                 return
         
+        # --- NEW PLAN GENERATION ---
         if not self.current_action or self.ttl == 0:
             obs_str = self.get_surroundings_info()
             
@@ -270,8 +283,7 @@ class Crewmate(LLMAgent, mesa.Agent):
             self.ttl = 3
             self.current_action = plan
             self.apply_plan(plan)
-        
-        
+
 class Task(mesa.Agent):
     def __init__(self, model):
         super().__init__(model)
