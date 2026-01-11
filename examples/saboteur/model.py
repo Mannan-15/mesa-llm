@@ -3,12 +3,11 @@ import mesa
 from mesa.datacollection import DataCollector
 from mesa.model import Model
 from mesa.space import MultiGrid, PropertyLayer
-# NOTE: No "from mesa.time import ..." needed in Mesa 3.0!
 from rich import print
 
 # Adjust imports if needed
 from examples.saboteur.agents import (
-    Impostor, Crewmate, 
+    Impostor, Crewmate, Task,
     IMPOSTOR_SYSTEM_PROMPT, CREWMATE_SYSTEM_PROMPT
 ) 
 from mesa_llm.reasoning.react import ReActReasoning 
@@ -18,10 +17,10 @@ class GameModel(Model):
         self,
         initial_imps: int = 1,
         initial_cms: int = 5,
-        width: int = 5,
-        height: int = 5,
+        width: int = 10,
+        height: int = 10,
         reasoning: type[ReActReasoning] = ReActReasoning, 
-        llm_model: str = "llama3.1", 
+        llm_model: str = "gpt-4o-mini",  # <--- CHANGED DEFAULT
         vision: int = 8,
         max_steps: int = 30,
         n_tasks: int = 10,
@@ -53,9 +52,15 @@ class GameModel(Model):
         
         for x, y in zip(task_x, task_y):
             self.task_layer.set_cell((x, y), 1)
+            
+            # Place Visual Task Agents
+            cell_contents = self.grid.get_cell_list_contents([(x, y)])
+            # Avoid placing duplicate tasks
+            if not any(isinstance(obj, Task) for obj in cell_contents):
+                task_agent = Task(self)
+                self.grid.place_agent(task_agent, (x, y))
 
         # 3. Data Collection
-        # In Mesa 3.0, we check 'model.agents' instead of 'schedule.agents'
         model_reporters = {
             "Crewmates": lambda m: len([a for a in m.agents if isinstance(a, Crewmate) and a.state != "dead"]),
             "Impostors": lambda m: len([a for a in m.agents if isinstance(a, Impostor)])
@@ -76,7 +81,6 @@ class GameModel(Model):
                 vision=vision,
                 step_prompt="Look for crewmates to eliminate."
             )
-            # Mesa 3.0 automatically adds 'impostor' to self.agents when initialized with 'model=self'
             x = self.rng.integers(0, self.grid.width)
             y = self.rng.integers(0, self.grid.height)
             self.grid.place_agent(impostor, (x, y))
@@ -96,20 +100,13 @@ class GameModel(Model):
             self.grid.place_agent(crewmate, (x, y))
             
     def step(self):
-        """
-        Execute one step of the model.
-        """
+        """Execute one step of the model."""
         print(
             f"\n[bold purple] Step {self.steps} ────────────────────────────────────────────────────────────────────────────────[/bold purple]"
         )
         
-        # Mesa 3.0: Use the built-in agent set
         self.agents.shuffle_do("step")
-
-        # Collect Data
         self.datacollector.collect(self)
-        
-        # Check Win Conditions
         self.check_game_over()
 
     def check_game_over(self):

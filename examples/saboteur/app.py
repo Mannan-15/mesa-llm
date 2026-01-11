@@ -1,26 +1,19 @@
 # app.py
+# import litellm
+# litellm._turn_on_debug()
+
 import sys
 import os
-
-# --- OLLAMA CONFIGURATION (Must run before model init) ---
-# This redirects the OpenAI client to your local Ollama server
-os.environ["OPENAI_API_KEY"] = "ollama"
-os.environ["OPENAI_BASE_URL"] = "http://localhost:11434/v1"
-os.environ["OLLAMA_API_KEY"] = "ollama"
-os.environ["OLLAMA/LLAMA3.1_API_KEY"] = "ollama"
-os.environ["LLAMA3.1_API_KEY"] = "ollama"
-os.environ["OLLAMA/QWEN2.5:0.5B_API_KEY"] = "ollama"
-os.environ["QWEN2.5:0.5B_API_KEY"] = "ollama"
-
-# Add the project root to system path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-
 import logging
 import warnings
-import os  # Added os import
-import numpy as np
-import matplotlib.colors as mcolors
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, "../../"))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# --- 2. NOW we can do the imports ---
+import numpy as np
 from dotenv import load_dotenv
 from mesa.visualization import (
     SolaraViz,
@@ -28,24 +21,35 @@ from mesa.visualization import (
     make_space_component,
 )
 
-# Adjust these imports to match your folder structure
-from examples.saboteur.agents import Impostor, Crewmate
+# These imports will now work because 'project_root' is in sys.path
+from examples.saboteur.agents import Impostor, Crewmate, Task
 from examples.saboteur.model import GameModel
 from mesa_llm.parallel_stepping import enable_automatic_parallel_stepping
 from mesa_llm.reasoning.react import ReActReasoning
 
-# --- Setup & Configuration ---
-# Suppress Pydantic and other warnings for cleaner logs
-warnings.filterwarnings("ignore", category=UserWarning)
+# Suppress Pydantic serialization warnings
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    module="pydantic.main",
+    message=r".*Pydantic serializer warnings.*",
+)
+
+# Also suppress through logging
 logging.getLogger("pydantic").setLevel(logging.ERROR)
 
 enable_automatic_parallel_stepping(mode="threading")
-load_dotenv()
+
+os.environ["OPENAI_BASE_URL"] = "http://localhost:11434/v1"
+os.environ["OPENAI_API_KEY"] = "ollama"
+
+# load_dotenv()
+# os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 # --- Visual Constants ---
 IMPOSTOR_COLOR = "#FF0000"  # Red
 CREWMATE_COLOR = "#00FF00"  # Green
-TASK_COLOR = "#FFD700"      # Gold (for the background task layer)
+TASK_COLOR = "#FFD700"      # Gold
 
 # --- Model Parameters (Sidebar) ---
 model_params = {
@@ -59,26 +63,24 @@ model_params = {
         "value": 1,
         "label": "Impostor Count",
         "min": 1,
-        "max": 3, # Reduced max for local performance
+        "max": 3,
     },
     "initial_cms": {
         "type": "SliderInt",
-        "value": 4, # Reduced default for local performance
+        "value": 4,
         "label": "Crewmate Count",
         "min": 1,
         "max": 10,
     },
-    # Reduced grid size slightly for faster pathfinding/rendering with local LLM lag
-    "width": 8, 
-    "height": 8,
-    "vision": 6, # Reduced vision slightly to reduce prompt token count (speed up Llama 3)
+    "width": 10,
+    "height": 10,
+    "vision": 6,
     "max_steps": 30,
     "reasoning": ReActReasoning,
-    "llm_model":"ollama/qwen2.5:0.5b",  # CHANGED: Default to local Llama 3.1
+    "llm_model": "ollama/llama3.1", 
 }
 
 # --- Initial Model Instance ---
-# SolaraViz needs an initial instance to build the layout
 model = GameModel(
     initial_imps=model_params["initial_imps"]["value"],
     initial_cms=model_params["initial_cms"]["value"],
@@ -88,7 +90,7 @@ model = GameModel(
     llm_model=model_params["llm_model"],
     vision=model_params["vision"],
     max_steps=model_params["max_steps"],
-    n_tasks=5,
+    n_tasks=6,
     seed=model_params["seed"]["value"],
 )
 
@@ -98,45 +100,42 @@ def agent_portrayal(agent):
         return
 
     portrayal = {
-        "size": 50,  # Size of the dot
+        "size": 50,
         "color": "black"
     }
     
+    # 1. Handle Dead Bodies
     if hasattr(agent, "state") and agent.state == "dead":
-        portrayal["color"] = "#555555"  # Dark Gray for dead bodies
-        portrayal["size"] = 30          # Smaller size (like a body on floor)
-        return portrayal                # Return early so we don't overwrite this
+        portrayal["color"] = "#555555"  # Dark Gray
+        portrayal["size"] = 30
+        return portrayal
+
+    # 2. Handle Tasks
+    # We check string name to avoid import errors
+    if type(agent).__name__ == "Task":
+        if agent.state == "Completed":
+            portrayal["color"] = "#006400"  # Dark Green (Completed)
+            portrayal["size"] = 40
+        else:
+            portrayal["color"] = "#FFD700"  # Gold (Active)
+            portrayal["size"] = 80
+        portrayal["marker"] = "s"
+        return portrayal
     
+    # 3. Handle Agents
     elif isinstance(agent, Impostor):
         portrayal["color"] = IMPOSTOR_COLOR
-        # Optional: Make Impostor slightly larger or distinct shape if supported
-        # portrayal["marker"] = "v" 
+        if agent.kill_cooldown > 0:
+             portrayal["color"] = "#8B0000" # Darker red on cooldown
 
     elif isinstance(agent, Crewmate):
         portrayal["color"] = CREWMATE_COLOR
 
     return portrayal
 
-# --- Grid & Task Layer Visualization ---
-def post_process(ax):
-    """
-    Custom drawing function to render the Task PropertyLayer 
-    underneath the agents.
-    """
-    ax.set_aspect("equal")
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.get_figure().set_size_inches(8, 8)
-
-    # Note: Visualizing the property layer (tasks) directly inside this specific 
-    # Solara component hook is complex without passing the model state explicitly.
-    # For V1, we stick to the agent grid.
-    pass
-
 # --- Components ---
 space_component = make_space_component(
     agent_portrayal, 
-    post_process=post_process, 
     draw_grid=True
 )
 
@@ -156,6 +155,6 @@ if __name__ == "__main__":
             chart_component,
         ],
         model_params=model_params,
-        name="Saboteur: AI Impostor Simulation (Local Llama 3.1)",
+        name="Saboteur: AI Impostor Simulation (OpenAI)",
     )
     
