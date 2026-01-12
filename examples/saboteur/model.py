@@ -72,6 +72,7 @@ class GameModel(Model):
         )
         
         # --- IMPOSTOR CREATION ---
+        impostors = []
         for i in range(initial_imps):
             impostor = Impostor(
                 model=self,
@@ -81,10 +82,16 @@ class GameModel(Model):
                 vision=vision,
                 step_prompt="Look for crewmates to eliminate."
             )
+            
             x = self.rng.integers(0, self.grid.width)
             y = self.rng.integers(0, self.grid.height)
+            impostors.append(impostor)
             self.grid.place_agent(impostor, (x, y))
 
+        impostor_ids = [imp.unique_id for imp in impostors]
+        for imp in impostors:
+            imp.team_ids = impostor_ids
+            
         # --- CREWMATE CREATION ---
         for i in range(initial_cms):
             crewmate = Crewmate(

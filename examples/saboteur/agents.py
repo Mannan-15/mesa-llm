@@ -102,6 +102,7 @@ class Impostor(LLMAgent, mesa.Agent):
         self.kill_cooldown = kill_cooldown
         self.ttl = ttl
         self.current_action = None
+        self.team_ids = []
         
         self.memory = STLTMemory(
             agent=self,
@@ -124,7 +125,7 @@ class Impostor(LLMAgent, mesa.Agent):
 
         for agent in nearby_agents:
             if agent.unique_id == self.unique_id: continue # Skip self
-            if isinstance(agent, Task): continue           # Skip Task agents!
+            if isinstance(agent, Task) or isinstance(agent, Impostor): continue           # Skip Task agents!
             
             # Calculate distance
             dist = max(abs(agent.pos[0] - self.pos[0]), abs(agent.pos[1] - self.pos[1]))
@@ -146,6 +147,7 @@ class Impostor(LLMAgent, mesa.Agent):
             
         obs.append("ALL VISIBLE AGENTS:")
         obs.append("\n".join(distant_agents) if distant_agents else "No other agents visible.")
+        obs.append(f"Other Impostor IDs (YOUR ALLIES): {self.team_ids}")
         
         return "\n".join(obs)
       
