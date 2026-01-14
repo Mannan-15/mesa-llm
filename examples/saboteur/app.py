@@ -118,7 +118,7 @@ def agent_portrayal(agent):
             portrayal["size"] = 40
         else:
             portrayal["color"] = "#FFD700"  # Gold (Active)
-            portrayal["size"] = 80
+            portrayal["size"] = 200
         portrayal["marker"] = "s"
         return portrayal
     

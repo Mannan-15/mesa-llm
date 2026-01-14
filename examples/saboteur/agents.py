@@ -126,7 +126,9 @@ class Impostor(LLMAgent, mesa.Agent):
         for agent in nearby_agents:
             if agent.unique_id == self.unique_id: continue # Skip self
             if isinstance(agent, Task) or isinstance(agent, Impostor): continue           # Skip Task agents!
-            
+            if hasattr(agent, "state") and agent.state == "dead":
+                distant_agents.append(f"- Agent {agent.unique_id} is dead at {agent.pos}")
+                continue
             # Calculate distance
             dist = max(abs(agent.pos[0] - self.pos[0]), abs(agent.pos[1] - self.pos[1]))
             
@@ -178,7 +180,7 @@ class Impostor(LLMAgent, mesa.Agent):
             # The actual loop control is handled by self.ttl = 3 below
             plan = self.reasoning.plan(
                 obs=formatted_prompt,
-                selected_tools=["kill_agent", "move_randomly", "fake_task"],
+                selected_tools=["kill_agent", "move_to", "move_randomly", "fake_task"],
                 ttl=3
             )
             
@@ -232,14 +234,19 @@ class Crewmate(LLMAgent, mesa.Agent):
         )
         nearby_agents = self.model.grid.get_cell_list_contents(nearby_cells)
         agent_list = []
+        is_dead = None
         for agent in nearby_agents:
             if agent.unique_id == self.unique_id: continue
             if isinstance(agent, Task): continue    # Ignore Task agents in vision list
-            
-            agent_list.append(f"- Agent {agent.unique_id} at {agent.pos}")
+            if hasattr(agent, "state") and agent.state == "dead":
+                is_dead = (f"- Agent {agent.unique_id} is dead at {agent.pos}")
+                continue
+            agent_list.append(f"- Agent {agent.unique_id} at {agent.pos} !!!")
 
         # 3. Format Output
         obs = []
+        if is_dead != None:
+            obs.append(is_dead)
         obs.append(f"Task Available Here: {'YES' if is_task_here else 'NO'}")
         obs.append("Agents Nearby:")
         obs.append("\n".join(agent_list) if agent_list else "None")
@@ -278,7 +285,7 @@ class Crewmate(LLMAgent, mesa.Agent):
             
             plan = self.reasoning.plan(
                 obs=formatted_prompt,
-                selected_tools=["move_randomly", "do_task", "stay"],
+                selected_tools=["trigger_discussion", "move_to", "move_randomly", "do_task", "stay"],
                 ttl=3
             )
             

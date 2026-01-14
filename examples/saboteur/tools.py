@@ -23,6 +23,9 @@ def _move_randomly_logic(agent):
 def _stay_logic(agent):
     return f"You stayed at {agent.pos}."
 
+def _move_to_logic(agent):
+    next
+
 # ==============================================================================
 #                             IMPOSTOR TOOLS
 # ==============================================================================
@@ -37,6 +40,10 @@ def move_randomly(agent: "LLMAgent", **kwargs) -> str:
         kwargs: Extra arguments ignored by this tool.
     """
     return _move_randomly_logic(agent)
+
+@tool(tool_manager=impostor_tool_manager)
+def move_to():
+    next
 
 @tool(tool_manager=impostor_tool_manager)
 def stay(agent: "LLMAgent", **kwargs) -> str:
@@ -177,6 +184,15 @@ def do_task(agent: "LLMAgent", **kwargs) -> str:
     cell_contents = agent.model.grid.get_cell_list_contents([agent.pos])
     for obj in cell_contents:
         if isinstance(obj, Task):
-            obj.remove()
+            agent.model.grid.remove_agent(obj)
     
     return f"SUCCESS: Task started at {agent.pos}."
+
+@tool(tool_manager=crewmate_tool_manager)
+def trigger_discussion():
+    next
+
+@tool(tool_manager=crewmate_tool_manager)
+def move_to():
+    next
+    
