@@ -33,6 +33,7 @@ class GameModel(Model):
         self.height = height
         self.max_steps = max_steps
         self.running = True
+        self.phase = "active"
         
         # 1. Setup Grid
         self.grid = MultiGrid(self.width, self.height, torus=False)
@@ -111,10 +112,16 @@ class GameModel(Model):
         print(
             f"\n[bold purple] Step {self.steps} ────────────────────────────────────────────────────────────────────────────────[/bold purple]"
         )
-        
-        self.agents.shuffle_do("step")
-        self.datacollector.collect(self)
-        self.check_game_over()
+        if hasattr(self, "phase") and self.phase == "active":
+            self.agents.shuffle_do("step")
+            self.datacollector.collect(self)
+            self.check_game_over()
+            
+        elif self.phase == "discussion":
+            self.run_discussion_logic()
+            self.phase = "active"
+            self.check_game_over()
+            
 
     def check_game_over(self):
         active_crewmates = [a for a in self.agents if isinstance(a, Crewmate) and a.state != "dead"]
@@ -126,4 +133,25 @@ class GameModel(Model):
         elif self.steps >= self.max_steps:
             self.running = False
             print(f"\n[bold green]GAME OVER: CREWMATES WIN! (Survived {self.max_steps} steps)[/bold green]")
+            
+    def run_discussion_logic(self):
+        print(f"\n--- DISCUSSION STARTED BY AGENT {self.discussion_trigger_data['report_id']} ---")
+        
+        # GATHER & FREEZE
+        prev_pos = {}
+        for agent in self.agents:
+            if isinstance(agent, Task):
+                continue
+            if (isinstance(agent, Crewmate) and hasattr(agent, "state") and agent.state == "dead"):
+                self.grid.remove_agent(agent)
+            prev_pos[agent.unique_id] = agent.pos
+            self.grid.place_agent(agent, (self.width // 2, self.height // 2))
+            
+        # COLLECT VOTES
+        votes = {}
+        
+            
+        
+    def trigger_meeting(self):
+        next
             

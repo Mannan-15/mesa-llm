@@ -285,7 +285,7 @@ class Crewmate(LLMAgent, mesa.Agent):
             
             plan = self.reasoning.plan(
                 obs=formatted_prompt,
-                selected_tools=["trigger_discussion", "move_to", "move_randomly", "do_task", "stay"],
+                selected_tools=["report_dead_body", "move_to", "move_randomly", "do_task", "stay"],
                 ttl=3
             )
             

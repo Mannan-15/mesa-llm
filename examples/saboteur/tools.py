@@ -189,7 +189,8 @@ def do_task(agent: "LLMAgent", **kwargs) -> str:
     return f"SUCCESS: Task started at {agent.pos}."
 
 @tool(tool_manager=crewmate_tool_manager)
-def trigger_discussion():
+def report_dead_body(agent: "LLMAgent"):
+    agent.model.trigger_meeting()
     next
 
 @tool(tool_manager=crewmate_tool_manager)
