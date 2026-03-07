@@ -49,7 +49,7 @@ def move_randomly(agent: "LLMAgent", **kwargs) -> str:
     return _move_randomly_logic(agent)
 
 @tool(tool_manager=impostor_tool_manager)
-def move_to():
+def move_to(agent: "LLMAgent", **kwargs):
     """
     Move to a specific location on the grid.
 
@@ -208,7 +208,7 @@ def report_dead_body(agent: "LLMAgent"):
     pass
 
 @tool(tool_manager=crewmate_tool_manager)
-def move_to():
+def move_to(agent: "LLMAgent", **kwargs):
     """
     Move to a specific location on the grid.
 
