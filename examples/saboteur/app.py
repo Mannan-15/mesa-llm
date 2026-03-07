@@ -155,6 +155,6 @@ if __name__ == "__main__":
             chart_component,
         ],
         model_params=model_params,
-        name="Saboteur: AI Impostor Simulation (OpenAI)",
+        name="Saboteur: AI Impostor Simulation",
     )
     

@@ -34,6 +34,7 @@ class GameModel(Model):
         self.max_steps = max_steps
         self.running = True
         self.phase = "active"
+        self.discussion_trigger_data = {"report_id": None}
         
         # 1. Setup Grid
         self.grid = MultiGrid(self.width, self.height, torus=False)
@@ -153,5 +154,5 @@ class GameModel(Model):
             
         
     def trigger_meeting(self):
-        next
+        pass
             

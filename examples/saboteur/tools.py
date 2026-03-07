@@ -24,7 +24,7 @@ def _stay_logic(agent):
     return f"You stayed at {agent.pos}."
 
 def _move_to_logic(agent):
-    next
+    pass
 
 # ==============================================================================
 #                             IMPOSTOR TOOLS
@@ -43,7 +43,14 @@ def move_randomly(agent: "LLMAgent", **kwargs) -> str:
 
 @tool(tool_manager=impostor_tool_manager)
 def move_to():
-    next
+    """
+    Move to a specific location on the grid.
+
+    Args:
+        agent: The agent instance.
+        kwargs: Extra arguments ignored.
+    """
+    pass
 
 @tool(tool_manager=impostor_tool_manager)
 def stay(agent: "LLMAgent", **kwargs) -> str:
@@ -190,10 +197,24 @@ def do_task(agent: "LLMAgent", **kwargs) -> str:
 
 @tool(tool_manager=crewmate_tool_manager)
 def report_dead_body(agent: "LLMAgent"):
-    agent.model.trigger_meeting()
-    next
+    """
+    Report a dead body to trigger an emergency meeting.
+
+    Args:
+        agent: The agent instance.
+        kwargs: Extra arguments ignored.
+    """
+    # agent.model.trigger_meeting()
+    pass
 
 @tool(tool_manager=crewmate_tool_manager)
 def move_to():
-    next
+    """
+    Move to a specific location on the grid.
+
+    Args:
+        agent: The agent instance.
+        kwargs: Extra arguments ignored.
+    """
+    pass
     
