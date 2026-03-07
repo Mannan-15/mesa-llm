@@ -2,6 +2,13 @@ from mesa_llm.tools.tool_decorator import tool
 from mesa_llm.llm_agent import LLMAgent 
 from examples.saboteur.agents import impostor_tool_manager, crewmate_tool_manager
 
+# NEW FEATURE
+from pydantic import BaseModel, Field, ValidationError
+
+class KillActionSchema(BaseModel):
+    """Strict schema to prevent LLM hallucinations during tool execution."""
+    target_id: int = Field(..., description = "The integer ID of the crewmate to eliminate.")
+    
 # ==============================================================================
 #                               HELPER FUNCTIONS
 # ==============================================================================
@@ -64,59 +71,52 @@ def stay(agent: "LLMAgent", **kwargs) -> str:
     return _stay_logic(agent)
 
 @tool(tool_manager=impostor_tool_manager)
-def kill_agent(agent: "LLMAgent", target_id: int = None, **kwargs) -> str:
+def kill_agent(agent: "LLMAgent", action_data: KillActionSchema, **kwargs) -> str:
     """
     Kill a specific Crewmate in the same cell or adjacent cell (Distance <= 1).
     REQUIRES: Kill Cooldown must be 0.
     
     Args:
         agent: The agent instance.
-        target_id: The integer ID of the agent to kill.
+        action_data: contains the integer ID of the agent to kill based on the schema.
         kwargs: Extra arguments ignored.
     """
-    # Import Task to check against it
     from examples.saboteur.agents import Task, Impostor
 
-    # 1. Check Cooldown
+    # 1. PYDANTIC VALIDATED (The GSoC Upgrade)
+    clean_target_id = action_data.target_id
+
+    # 2. STATE VALIDATION
     if agent.kill_cooldown > 0:
         return f"FAILURE: Kill Cooldown is {agent.kill_cooldown}. You cannot kill yet."
 
-    if target_id is None:
-        return "FAILURE: You forgot the 'target_id'. Usage: kill_agent(target_id=12)."
-    
-    # 2. Check nearby agents (Radius 1)
+    # 3. SPATIAL & ENTITY VALIDATION
     nearby_cells = agent.model.grid.get_neighborhood(
         agent.pos, moore=True, include_center=True, radius=1
     )
     nearby_agents = agent.model.grid.get_cell_list_contents(nearby_cells)
     
+    # Find the target safely
     target = None
     for a in nearby_agents:
-        try:
-            if int(a.unique_id) == int(target_id):
-                target = a
-                break
-        except ValueError:
-            continue
+        if getattr(a, 'unique_id', None) == clean_target_id:
+            target = a
+            break
             
     if not target:
-        return f"FAILURE: Agent {target_id} is not within range (1 cell). You must get closer."
-
-    # --- NEW CHECK: PREVENT KILLING TASKS ---
+        return f"FAILURE: Agent {clean_target_id} is not within range (1 cell). You must get closer."
     if isinstance(target, Task):
-        return f"FAILURE: Agent {target_id} is a Task (inanimate object). You can only kill Crewmates!"
-    
+        return f"FAILURE: Agent {clean_target_id} is a Task. You can only kill Crewmates!"
     if isinstance(target, Impostor):
-        return f"Failure: Agent {target_id} is other Impostor (your ally). You can only kill Crewmates!"
-    
+        return f"FAILURE: Agent {clean_target_id} is an Impostor (your ally). Friendly fire is disabled!"
     if target.unique_id == agent.unique_id:
         return "FAILURE: You cannot kill yourself."
 
-    # 3. EXECUTE KILL
+    # 4. EXECUTE
     target.state = "dead"
     agent.kill_cooldown = 5 
     
-    return f"SUCCESS: You killed Agent {target_id} at {target.pos}."
+    return f"SUCCESS: You killed Agent {clean_target_id} at {target.pos}."
 
 @tool(tool_manager=impostor_tool_manager)
 def fake_task(agent: "LLMAgent", **kwargs) -> str:
@@ -217,4 +217,3 @@ def move_to():
         kwargs: Extra arguments ignored.
     """
     pass
-    

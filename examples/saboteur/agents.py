@@ -161,9 +161,14 @@ class Impostor(LLMAgent, mesa.Agent):
         if self.ttl > 0:
             self.ttl -= 1
             if self.current_action:
-                # Use apply_plan to automatically unwrap and execute
-                self.apply_plan(self.current_action)
-                return
+                if "kill_agent" in str(self.current_action) and self.ttl != 0:
+                    self.ttl = 0
+                    self.step()
+                    return
+                else:
+                    # Use apply_plan to automatically unwrap and execute
+                    self.apply_plan(self.current_action)
+                    return
         
         # --- NEW PLAN GENERATION ---
         if not self.current_action or self.ttl == 0:
@@ -199,7 +204,8 @@ class Crewmate(LLMAgent, mesa.Agent):
         system_prompt=CREWMATE_SYSTEM_PROMPT,
         vision=4,
         internal_state=[],
-        step_prompt=CREWMATE_STEP_PROMPT_TEMPLATE
+        step_prompt=CREWMATE_STEP_PROMPT_TEMPLATE,
+        backstory="You are the ship's unofficial detective. You are highly observant. Instead of just doing tasks, you like to follow other agents from a safe distance to see if they are doing tasks or just wandering around suspiciously. You are eager to report dead bodies and find the killer.", # NEW PARAMETER (GSoC Upgrade)
     ):
         super().__init__(
             model=model,
@@ -209,6 +215,12 @@ class Crewmate(LLMAgent, mesa.Agent):
             vision=vision,
             internal_state=internal_state,
             step_prompt=step_prompt,
+        )
+        # --- INITIALIZE STORY (GSoC Upgrade) ---
+        self.backstory = backstory
+        self.memory.add_to_memory(
+            type="system", 
+            content={"identity_seed": self.backstory}
         )
         self.vision = vision
         self.state = "moving"
@@ -266,17 +278,26 @@ class Crewmate(LLMAgent, mesa.Agent):
                 )
             return
 
-        # --- TTL EXECUTION ---
+        # 1. GET CURRENT ENVIRONMENT
+        obs_str = self.get_surroundings_info()
+
+        # 2. THE INTERRUPT TRIGGER (GSoC Upgrade)
+        # If we have a plan, but we suddenly see a dead body, PANIC and drop the plan!
+        if self.ttl > 0 and "dead" in obs_str:
+            print(f"[bold red]INTERRUPT TRIGGERED:[/] Agent {self.unique_id} saw a dead body! Purging TTL queue!")
+            self.ttl = 0
+            self.current_action = None
+            self.memory.add_to_memory(type="system", content={"alert": "Saw a dead body! Plan aborted."})
+
+        # 3. TTL EXECUTION
         if self.ttl > 0:
             self.ttl -= 1
             if self.current_action:
                 self.apply_plan(self.current_action)
                 return
         
-        # --- NEW PLAN GENERATION ---
+        # 4. NEW PLAN GENERATION
         if not self.current_action or self.ttl == 0:
-            obs_str = self.get_surroundings_info()
-            
             formatted_prompt = CREWMATE_STEP_PROMPT_TEMPLATE.format(
                 step=self.model.steps,
                 pos=self.pos,
