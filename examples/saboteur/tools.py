@@ -71,19 +71,42 @@ def stay(agent: "LLMAgent", **kwargs) -> str:
     return _stay_logic(agent)
 
 @tool(tool_manager=impostor_tool_manager)
-def kill_agent(agent: "LLMAgent", action_data: KillActionSchema, **kwargs) -> str:
+def kill_agent(agent: "LLMAgent", action_data: KillActionSchema = None, **kwargs) -> str:
     """
     Kill a specific Crewmate in the same cell or adjacent cell (Distance <= 1).
     REQUIRES: Kill Cooldown must be 0.
     
     Args:
         agent: The agent instance.
-        action_data: contains the integer ID of the agent to kill based on the schema.
+        action_data: The strict Pydantic schema containing the target_id.
         kwargs: Extra arguments ignored.
     """
     from examples.saboteur.agents import Task, Impostor
+    import ast
+    from pydantic import ValidationError
 
-    # 1. PYDANTIC VALIDATED (The GSoC Upgrade)
+    # 0. HANDLE MISSING ARGUMENTS (When the LLM gets lazy)
+    if action_data is None and 'target_id' not in kwargs:
+        return "FAILURE: You forgot to provide the target_id! You must specify who to kill (e.g., target_id=12)."
+
+    # 1. THE GSOC PATCH (Parse whatever messy format mesa-llm throws at us)
+    try:
+        if isinstance(action_data, str):
+            action_dict = ast.literal_eval(action_data)
+            action_data = KillActionSchema(**action_dict)
+        elif isinstance(action_data, dict):
+            action_data = KillActionSchema(**action_data)
+        elif 'target_id' in kwargs: # Fallback if framework passes it cleanly in kwargs
+            action_data = KillActionSchema(target_id=kwargs['target_id'])
+    except (ValueError, SyntaxError) as e:
+        return "FAILURE: Your action_data was formatted incorrectly. Use a valid JSON/dictionary."
+    except ValidationError as e:
+        return f"FAILURE: Invalid format. You must provide a valid target_id. Details: {e}"
+
+    # Ensure it successfully became a schema object
+    if not isinstance(action_data, KillActionSchema):
+        return "FAILURE: Could not extract target_id from your action."
+
     clean_target_id = action_data.target_id
 
     # 2. STATE VALIDATION

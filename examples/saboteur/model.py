@@ -73,10 +73,6 @@ class GameModel(Model):
             model_reporters=model_reporters, agent_reporters=agent_reporters
         )
         
-        # NEW PARAMETER (GSoC Upgrade)
-        backstories_cm = ["You are a paranoid veteran astronaut. You have survived an Impostor attack before. You trust absolutely no one. If another agent gets too close to you, your first priority is to run away. You prioritize your own survival over completing tasks.",
-                     "You are the ship's unofficial detective. You are highly observant. Instead of just doing tasks, you like to follow other agents from a safe distance to see if they are doing tasks or just wandering around suspiciously. You are eager to report dead bodies and find the killer.",]
-        
         # --- IMPOSTOR CREATION ---
         impostors = []
         for i in range(initial_imps):
@@ -97,6 +93,14 @@ class GameModel(Model):
         impostor_ids = [imp.unique_id for imp in impostors]
         for imp in impostors:
             imp.team_ids = impostor_ids
+            
+        # NEW PARAMETER (GSoC Upgrade)
+        backstories_cm = ["You are a paranoid veteran astronaut. You have survived an Impostor attack before.\
+                You trust absolutely no one. If another agent gets too close to you, your first priority is to run away.\
+                You prioritize your own survival over completing tasks.",
+                "You are the ship's unofficial detective. You are highly observant. Instead of just doing tasks,\
+                you like to follow other agents from a safe distance to see if they are doing tasks or just wandering around suspiciously.\
+                You are eager to report dead bodies and find the killer.",]
             
         # --- CREWMATE CREATION ---
         for i in range(initial_cms):
