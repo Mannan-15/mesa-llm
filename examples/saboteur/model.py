@@ -161,7 +161,7 @@ class GameModel(Model):
         votes = {}
         
             
-        
+    # Agents Discussion Scene
     def trigger_meeting(self):
         pass
             

@@ -12,7 +12,6 @@ project_root = os.path.abspath(os.path.join(current_dir, "../../"))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# --- 2. NOW we can do the imports ---
 import numpy as np
 from dotenv import load_dotenv
 from mesa.visualization import (
@@ -21,7 +20,6 @@ from mesa.visualization import (
     make_space_component,
 )
 
-# These imports will now work because 'project_root' is in sys.path
 from examples.saboteur.agents import Impostor, Crewmate, Task
 from examples.saboteur.model import GameModel
 from mesa_llm.parallel_stepping import enable_automatic_parallel_stepping
@@ -157,4 +155,3 @@ if __name__ == "__main__":
         model_params=model_params,
         name="Saboteur: AI Impostor Simulation",
     )
-    
