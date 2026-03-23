@@ -1,11 +1,19 @@
 <h1>LLM-Powered Social Deduction (Saboteur/Among Us)</h1>
-<h3>⚠️ Active development branch: gsoc-proposal</h3>
+<h3>⚠️ Active development branch: GSoC-Proposal</h3>
 
 <p><strong>Disclaimer:</strong> This is a toy model designed for illustrative purposes and is not based on a real research paper. It serves as a flagship demonstration of how Mesa-LLM handles complex multi-agent spatial reasoning, asymmetrical information, and deceptive communication.</p>
 
 <p><strong>Read the Full GSoC 2026 Proposal:</strong> <a href="https://docs.google.com/document/d/1jJSmoG6reioV8g0RfzwpGL61NDR3NMLPVECBdu5i2ZQ/edit?usp=sharing">Mesa-LLM Iterations to push to production (Google Docs)</a></p>
 
 <p><strong>Model Configuration:</strong> This simulation has been tested with both ChatGPT and local Ollama models. It is currently configured by default to run locally using <strong>Ollama 3</strong> for cost-effective and low-latency testing.</p>
+
+<hr>
+
+<h3>How to Run</h3>
+<p>To run this simulation locally, clone the feature branch and launch the Solara web application:</p>
+<pre><code>git clone -b feature/saboteur-example https://github.com/Mannan-15/mesa-llm.git
+cd mesa-llm/examples/saboteur
+solara run app.py</code></pre>
 
 <hr>
 
