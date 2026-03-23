@@ -1,5 +1,5 @@
 <h1>LLM-Powered Social Deduction (Saboteur/Among Us)</h1>
-<h3>⚠️ Active development branch: gsoc-proposal</h3>
+<h3>⚠️ Active development branch: GSoC-Proposal</h3>
 
 <p><strong>Disclaimer:</strong> This is a toy model designed for illustrative purposes and is not based on a real research paper. It serves as a flagship demonstration of how Mesa-LLM handles complex multi-agent spatial reasoning, asymmetrical information, and deceptive communication.</p>
 
