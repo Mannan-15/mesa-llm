@@ -3,6 +3,12 @@
 
 <p><strong>Disclaimer:</strong> This is a toy model designed for illustrative purposes and is not based on a real research paper. It serves as a flagship demonstration of how Mesa-LLM handles complex multi-agent spatial reasoning, asymmetrical information, and deceptive communication.</p>
 
+<p><strong>Read the Full GSoC 2026 Proposal:</strong> <a href="https://docs.google.com/document/d/1jJSmoG6reioV8g0RfzwpGL61NDR3NMLPVECBdu5i2ZQ/edit?usp=sharing">Mesa-LLM Iterations to push to production (Google Docs)</a></p>
+
+<p><strong>Model Configuration:</strong> This simulation has been tested with both ChatGPT and local Ollama models. It is currently configured by default to run locally using <strong>Ollama 3</strong> for cost-effective and low-latency testing.</p>
+
+<hr>
+
 <h3>Summary</h3>
 <p>This model is a grid-based social deduction simulation inspired by the game <em>Among Us</em>. The objective is to test how effectively Large Language Models can navigate imperfect information, maintain hidden roles, and engage in active deception or logical deduction.</p>
 <ul>
