@@ -9,6 +9,14 @@
 
 <hr>
 
+<h3>How to Run</h3>
+<p>To run this simulation locally, clone the feature branch and launch the Solara web application:</p>
+<pre><code>git clone -b feature/saboteur-example https://github.com/Mannan-15/mesa-llm.git
+cd mesa-llm/examples/saboteur
+solara run app.py</code></pre>
+
+<hr>
+
 <h3>Summary</h3>
 <p>This model is a grid-based social deduction simulation inspired by the game <em>Among Us</em>. The objective is to test how effectively Large Language Models can navigate imperfect information, maintain hidden roles, and engage in active deception or logical deduction.</p>
 <ul>
