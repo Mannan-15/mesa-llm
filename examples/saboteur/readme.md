@@ -24,6 +24,8 @@ solara run app.py</code></pre>
   <li><strong>Saboteurs (Impostors):</strong> Their objective is to eliminate the Crewmates before the tasks are finished without getting caught. They have access to restricted tools and can use deceptive communication to frame innocent agents.</li>
 </ul>
 
+<p align="center"><img src="https://raw.githubusercontent.com/Mannan-15/mesa-llm/feature/saboteur-example/examples/saboteur/mesa_result.png" height="450" /></p>
+
 <h3>Agent Backstories & Identity</h3>
 <p>To test complex role-playing, agents are injected with highly specific, asymmetrical <strong>backstories</strong> via their system prompts. A Crewmate might secretly be an <em>Engineer</em> (who is legally allowed to use vents, risking looking like a Saboteur), while a Saboteur might be a <em>Shapeshifter</em> (capable of temporarily mimicking another agent's identity). These backstories dictate their behavioral heuristics and how they defend themselves during interrogations.</p>
 
